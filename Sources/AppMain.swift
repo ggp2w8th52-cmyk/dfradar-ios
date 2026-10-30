@@ -60,6 +60,12 @@ final class RadarVC: UIViewController {
     // MARK: - render / display
 
     private func publish(_ msg: Msg) {
+        // 一旦收到真实数据就停掉自测，避免 mock 覆盖
+        if let t = mockTimer {
+            t.invalidate()
+            mockTimer = nil
+            mockButton.setTitle("Self test", for: .normal)
+        }
         let img = render(msg)
         pip.push(img)
         preview.image = img
@@ -171,10 +177,45 @@ final class RadarVC: UIViewController {
 
     private func refreshStatus() {
         let ago = net.lastRecv.map { String(format: "%.1fs", Date().timeIntervalSince($0)) } ?? "-"
+        let bindState = net.isBound ? "bind ok" : "bind FAIL"
+        let recvColor: UIColor = net.received > 0 ? .systemGreen : .systemOrange
 
         // stale when no packet for more than 3 s
         statusLabel.textColor = net.isStale ? .systemRed : .systemGreen
-        statusLabel.text = "listening :47810 | last \(ago) | ents \(lastCount)"
+        statusLabel.text = """
+        \(bindState)  ip \(localIP()):47810
+        pkts \(net.received) bad \(net.dropped)  last \(ago)  ents \(lastCount)
+        """
+        if net.received == 0 { statusLabel.textColor = recvColor }
+    }
+
+    /// 本机在 Wi-Fi / 热点上的 IPv4，便于确认 PC 该往哪发
+    private func localIP() -> String {
+        var addr = "?"
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return addr }
+        defer { freeifaddrs(ifaddr) }
+
+        var ptr = first
+        while true {
+            let flags = Int32(ptr.pointee.ifa_flags)
+            if let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == sa_family_t(AF_INET),
+               (flags & IFF_UP) != 0, (flags & IFF_LOOPBACK) == 0 {
+                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                var sin = UnsafePointer<sockaddr_in>(OpaquePointer(sa))
+                if let sin = sin {
+                    var a = sin.pointee.sin_addr
+                    var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                    if inet_ntop(AF_INET, &a, &buf, socklen_t(INET_ADDRSTRLEN)) != nil {
+                        addr = String(cString: buf)
+                    }
+                    _ = host
+                }
+            }
+            guard let next = ptr.pointee.ifa_next else { break }
+            ptr = next
+        }
+        return addr
     }
 
     private func configureAudio() {
