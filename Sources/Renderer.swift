@@ -61,8 +61,20 @@ func render(_ msg: Msg, size: CGSize = CGSize(width: 480, height: 270)) -> UIIma
         c.strokePath()
 
         let eye = msg.eye
+        // 视锥判断用的前向/右向（与 w2s 同一套约定）
+        let yawRad = msg.yaw * .pi / 180
+        let fx = cos(yawRad), fy = sin(yawRad)
+        let rx = -sin(yawRad), ry = cos(yawRad)
+        let halfFov = msg.hfov / 2
 
         for e in msg.ents {
+            // 相对自己的方向（用于视锥判断与边缘箭头）
+            let dx = e.pos.x - eye.x
+            let dy = e.pos.y - eye.y
+            let forward = dx * fx + dy * fy
+            let right = dx * rx + dy * ry
+            let bearing = atan2(right, forward) * 180 / .pi
+
             guard let hit = w2s(eye: eye, yaw: msg.yaw, pitch: msg.pitch,
                                 target: e.pos, hfov: msg.hfov, W: W, H: H) else { continue }
 
@@ -82,6 +94,32 @@ func render(_ msg: Msg, size: CGSize = CGSize(width: 480, height: 270)) -> UIIma
                 color = .systemYellow
             } else {
                 color = .systemOrange
+            }
+
+            // 视锥外：只在屏幕边缘画箭头 + 距离，不画骨架（避免画到画布外白算）
+            if abs(bearing) > halfFov {
+                let isLeft = bearing < 0
+                let ax: CGFloat = isLeft ? 14 : size.width - 14
+                let ay: CGFloat = size.height / 2
+                c.setFillColor(color.withAlphaComponent(0.9).cgColor)
+                c.beginPath()
+                if isLeft {
+                    c.move(to: CGPoint(x: ax - 8, y: ay))
+                    c.addLine(to: CGPoint(x: ax + 6, y: ay - 9))
+                    c.addLine(to: CGPoint(x: ax + 6, y: ay + 9))
+                } else {
+                    c.move(to: CGPoint(x: ax + 8, y: ay))
+                    c.addLine(to: CGPoint(x: ax - 6, y: ay - 9))
+                    c.addLine(to: CGPoint(x: ax - 6, y: ay + 9))
+                }
+                c.closePath()
+                c.fillPath()
+                let txt = String(format: "%.0f\u{00B0} %.0fm", bearing, dist)
+                let tx: CGFloat = isLeft ? ax + 4 : ax - 62
+                (txt as NSString).draw(at: CGPoint(x: tx, y: ay + 11),
+                    withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 9, weight: .bold),
+                                     .foregroundColor: color])
+                continue
             }
 
             // a 1.7 m body spans H*0.55 pixels at 1 m
