@@ -69,7 +69,7 @@ func render(_ msg: Msg, size: CGSize = CGSize(width: 480, height: 270)) -> UIIma
             let d = (dx * dx + dy * dy + (e.pos.z - eye.z) * (e.pos.z - eye.z)).squareRoot()
             var nm = ""
             if let names = msg.names, i < names.count { nm = names[i] }
-            items.append(Item(id: e.id, dist: d, bearing: atan2(rgt, fwd) * 180 / .pi,
+            items.append(Item(id: Float(e.id), dist: d, bearing: atan2(rgt, fwd) * 180 / .pi,
                               forward: fwd, hp: e.hp, behind: e.visible < 0.5,
                               name: nm, pos: e.pos))
         }
