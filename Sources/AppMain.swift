@@ -21,6 +21,7 @@ final class RadarVC: UIViewController {
     private let pip = PiPHost()
     private let net = Net()
     private let audio = SilentAudio()
+    private let localNet = LocalNetPrompt()
 
     private let titleLabel = UILabel()
     private let statusLabel = UILabel()
@@ -46,6 +47,13 @@ final class RadarVC: UIViewController {
             DispatchQueue.main.async { self?.publish(msg) }
         }
         net.start(port: 47810)
+
+        // 触发 iOS「本地网络」授权：Bonjour 浏览 + 本地 TCP 监听
+        localNet.onState = { [weak self] text in
+            self?.probeLabel.text = text
+            self?.probeLabel.textColor = text.contains("ready") ? .systemGreen : .systemOrange
+        }
+        localNet.fire()
 
         uiTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.refreshStatus()
@@ -191,31 +199,28 @@ final class RadarVC: UIViewController {
 
     /// 本机在 Wi-Fi / 热点上的 IPv4，便于确认 PC 该往哪发
     private func localIP() -> String {
-        var addr = "?"
+        var result = "?"
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return addr }
+        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return result }
         defer { freeifaddrs(ifaddr) }
 
-        var ptr = first
-        while true {
-            let flags = Int32(ptr.pointee.ifa_flags)
-            if let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == sa_family_t(AF_INET),
-               (flags & IFF_UP) != 0, (flags & IFF_LOOPBACK) == 0 {
-                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                var sin = UnsafePointer<sockaddr_in>(OpaquePointer(sa))
-                if let sin = sin {
-                    var a = sin.pointee.sin_addr
-                    var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-                    if inet_ntop(AF_INET, &a, &buf, socklen_t(INET_ADDRSTRLEN)) != nil {
-                        addr = String(cString: buf)
-                    }
-                    _ = host
+        var ptr: UnsafeMutablePointer<ifaddrs>? = first
+        while let cur = ptr {
+            let flags = Int32(cur.pointee.ifa_flags)
+            if let sa = cur.pointee.ifa_addr,
+               sa.pointee.sa_family == sa_family_t(AF_INET),
+               (flags & IFF_UP) != 0,
+               (flags & IFF_LOOPBACK) == 0 {
+                let sin = UnsafeRawPointer(sa).assumingMemoryBound(to: sockaddr_in.self)
+                var addr = sin.pointee.sin_addr
+                var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                if inet_ntop(AF_INET, &addr, &buf, socklen_t(INET_ADDRSTRLEN)) != nil {
+                    result = String(cString: buf)
                 }
             }
-            guard let next = ptr.pointee.ifa_next else { break }
-            ptr = next
+            ptr = cur.pointee.ifa_next
         }
-        return addr
+        return result
     }
 
     private func configureAudio() {
