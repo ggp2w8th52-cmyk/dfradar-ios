@@ -36,9 +36,9 @@ final class PiPHost: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
     func start() {
         guard isSupported else { return }
         if controller == nil {
-            guard let source = AVPictureInPictureController.ContentSource(
+            let source = AVPictureInPictureController.ContentSource(
                 sampleBufferDisplayLayer: layer,
-                playbackDelegate: self) else { return }
+                playbackDelegate: self)
             let ctl = AVPictureInPictureController(contentSource: source)
             ctl.canStartPictureInPictureAutomaticallyFromInline = true
             controller = ctl
