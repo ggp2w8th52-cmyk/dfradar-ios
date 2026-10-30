@@ -6,9 +6,12 @@ on:
 
 jobs:
   ipa:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: sw_vers && xcodebuild -version && xcode-select -p
 
       - name: Install xcodegen
         run: brew install xcodegen
