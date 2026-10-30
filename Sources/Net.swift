@@ -41,6 +41,8 @@ struct Msg: Decodable {
     var pitch: Float
     var hfov: Float
     var ents: [Ent]
+    /// optional, index-aligned player names
+    var names: [String]?
 
     enum CodingKeys: String, CodingKey {
  case selfPos = "self" // self Swift selfPos
@@ -48,14 +50,16 @@ struct Msg: Decodable {
         case pitch
         case hfov
         case ents
+        case names
     }
 
-    init(selfPos: V3, yaw: Float, pitch: Float, hfov: Float, ents: [Ent]) {
+    init(selfPos: V3, yaw: Float, pitch: Float, hfov: Float, ents: [Ent], names: [String]? = nil) {
         self.selfPos = selfPos
         self.yaw = yaw
         self.pitch = pitch
         self.hfov = hfov
         self.ents = ents
+        self.names = names
     }
 
     init(from decoder: Decoder) throws {
@@ -65,6 +69,7 @@ struct Msg: Decodable {
         self.pitch = try c.decodeIfPresent(Float.self, forKey: .pitch) ?? 0
         self.hfov = try c.decodeIfPresent(Float.self, forKey: .hfov) ?? 90
         self.ents = try c.decodeIfPresent([Ent].self, forKey: .ents) ?? []
+        self.names = try c.decodeIfPresent([String].self, forKey: .names)
     }
 
  /// PC self 1.6
