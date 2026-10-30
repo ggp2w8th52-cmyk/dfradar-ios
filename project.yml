@@ -20,6 +20,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.xh.dfradar
         INFOPLIST_FILE: Resources/Info.plist
         SWIFT_VERSION: "5.9"
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         IPHONEOS_DEPLOYMENT_TARGET: "15.0"
