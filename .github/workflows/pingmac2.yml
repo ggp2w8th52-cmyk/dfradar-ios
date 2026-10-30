@@ -1,0 +1,11 @@
+name: pingmac2
+on:
+  workflow_dispatch:
+jobs:
+  p:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: uname -a
