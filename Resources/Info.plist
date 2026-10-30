@@ -28,6 +28,11 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Receives radar data from a computer on the same Wi-Fi network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dfradar._tcp</string>
+		<string>_http._tcp</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
