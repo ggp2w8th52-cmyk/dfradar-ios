@@ -103,8 +103,8 @@ final class SilentAudio {
         engine.connect(source, to: mixer, format: format)
         mixer.outputVolume = 0
 
-        try? engine.prepare()
-        try? engine.start()
+        engine.prepare()          // prepare() is not throwing
+        try? engine.start()       // start() throws
     }
 
     func stop() {
